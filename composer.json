@@ -1,0 +1,61 @@
+{
+    "name": "szhorvath/flysystem-aws-s3-plus",
+    "description": "AWS S3 filesystem adapter for Flysystem extended with S3 bucket object versioning",
+    "keywords": [
+        "aws",
+        "s3",
+        "flysystem",
+        "filesystem",
+        "storage",
+        "file",
+        "files",
+        "object",
+        "versioning"
+    ],
+    "type": "library",
+    "require": {
+        "php": "^8.1",
+        "league/flysystem-aws-s3-v3": "^3.19.0",
+        "illuminate/conditionable": "^10.31",
+        "illuminate/filesystem": "^10.31",
+        "illuminate/support": "*"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Szhorvath\\FlysystemAwsS3Plus\\": "src/",
+            "Szhorvath\\FlysystemAwsS3Plus\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Sandor Horvath",
+            "email": "z.sandor.horvath@gmail.com"
+        }
+    ],
+    "require-dev": {
+        "pestphp/pest": "^2.24",
+        "orchestra/testbench": "^8.15",
+        "pestphp/pest-plugin-type-coverage": "^2.4",
+        "laravel/pint": "^1.13"
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/TestCase.php"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": [
+            "@php vendor/bin/pest"
+        ],
+        "pest": "vendor/bin/pest --parallel",
+        "pest-coverage": "vendor/bin/pest --coverage",
+        "pest-type": "vendor/bin/pest --type-coverage",
+        "pint": "vendor/bin/pint"
+    }
+}
