@@ -1,0 +1,49 @@
+name: PHP Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      max-parallel: 2
+      matrix:
+        php-versions: ['8.1', '8.2', '8.3']
+
+    name: PHP ${{ matrix.php-versions }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@master
+      with:
+        php-version: ${{ matrix.php-versions }}
+        coverage: xdebug
+
+    - name: Setup minio
+      run: |
+        docker run -d -p 9000:9000 --name minio
+                  -e "MINIO_ACCESS_KEY=sail"
+                  -e "MINIO_SECRET_KEY=password"
+                  -v /tmp/data:/data
+                  -v /tmp/config:/root/.minio
+                  minio/minio server /data
+        export AWS_ACCESS_KEY_ID=sail
+        export AWS_SECRET_ACCESS_KEY=password
+        export AWS_EC2_METADATA_DISABLED=true
+        aws --endpoint-url http://127.0.0.1:9000/ s3 mb s3://testbucket
+
+    - name: Validate composer.json and composer.lock
+      run: composer validate
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: PHP Pint
+      run: ./vendor/bin/pint --test
+
+    - name: Run test suite
+      run: ./vendor/bin/pest --parallel

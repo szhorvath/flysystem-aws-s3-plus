@@ -12,10 +12,10 @@ use Szhorvath\FlysystemAwsS3Plus\AwsS3V3PlusAdapter;
 describe('S3 AWS plus adapter', function () {
     beforeEach(function () {
         $this->config = [
-            'bucket' => $_ENV['AWS_BUCKET'] = 'test',
+            'bucket' => $_ENV['AWS_BUCKET'] = 'testbucket',
             'region' => $_ENV['AWS_DEFAULT_REGION'] = 'eu-west-1',
-            'url' => $_ENV['AWS_URL'] = 'http://minio:9000',
-            'endpoint' => 'http://minio:9000',
+            'url' => $_ENV['AWS_URL'] = 'http://127.0.0.1:9000',
+            'endpoint' => 'http://127.0.0.1:9000',
             'use_path_style_endpoint' => true,
             'throw' => true,
             'version' => 'latest',
