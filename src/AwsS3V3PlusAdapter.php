@@ -30,7 +30,74 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
     }
 
     /**
-     * @throws UnableToReadFile|InvalidArgumentException
+     * Get the URL for the file at the given path.
+     *
+     * @param  string  $path
+     * @return string
+     *
+     * @throws \RuntimeException
+     */
+    public function url($path)
+    {
+        // If an explicit base URL has been set on the disk configuration then we will use
+        // it as the base URL instead of the default path. This allows the developer to
+        // have full control over the base path for this filesystem's generated URLs.
+        if (isset($this->config['url'])) {
+            return $this->concatPathToUrl($this->config['url'], $this->prefixer->prefixPath($path));
+        }
+
+        return $this->client->getObjectUrl(
+            $this->config['bucket'], $this->prefixer->prefixPath($path)
+        );
+    }
+
+    /**
+     * Determine if temporary URLs can be generated.
+     *
+     * @return bool
+     */
+    public function providesTemporaryUrls()
+    {
+        return true;
+    }
+
+    /**
+     * Get a temporary URL for the file at the given path.
+     *
+     * @param  string  $path
+     * @param  DateTimeInterface  $expiration
+     * @return string
+     *
+     * @throws RuntimeException
+     * @throws LogicException
+     * @throws InvalidArgumentException
+     */
+    public function temporaryUrl($path, $expiration, array $options = [], string $versionId = null)
+    {
+        $version = $versionId ? ['VersionId' => $versionId] : [];
+
+        $command = $this->client->getCommand('GetObject', array_merge([
+            'Bucket' => $this->config['bucket'],
+            'Key' => $this->prefixer->prefixPath($path),
+        ], $options, $version));
+
+        $uri = $this->client->createPresignedRequest(
+            $command, $expiration, $options
+        )->getUri();
+
+        // If an explicit base URL has been set on the disk configuration then we will use
+        // it as the base URL instead of the default path. This allows the developer to
+        // have full control over the base path for this filesystem's generated URLs.
+        if (isset($this->config['temporary_url'])) {
+            $uri = $this->replaceBaseUrl($uri, $this->config['temporary_url']);
+        }
+
+        return (string) $uri;
+    }
+
+    /**
+     * @throws UnableToReadFile
+     * @throws InvalidArgumentException
      */
     private function readObject(string $path, bool $wantsStream, array $options = []): StreamInterface
     {
@@ -102,7 +169,7 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{hash: string, key: string, version: string, type: string, latest: bool, updatedAt: CarbonImmutable, size: int}>
+     * @return Collection<int, array{hash: string, key: string, version: string, type: string, latest: bool, updatedAt: CarbonImmutable, size: int}>
      *
      * @throws UnableToListVersions
      */

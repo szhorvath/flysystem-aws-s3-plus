@@ -5,6 +5,7 @@ use Aws\Result;
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Utils;
+use Illuminate\Support\Carbon;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\AwsS3V3\PortableVisibilityConverter as AwsS3PortableVisibilityConverter;
 use League\Flysystem\Filesystem as Flysystem;
@@ -134,6 +135,39 @@ it('should retrieve a list of versions of an S3 object', function () {
         ->latest->toBeFalse()
         ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
         ->size->toBe(12);
+});
+
+it('should get a temporary url of a specific version of an object', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    putObject($this->client, $this->config, 'text.txt', 'DataVersion1');
+    putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo');
+
+    $versions = listObjectVersions($this->client, $this->config, 'text.txt')->get('Versions');
+
+    $expiresAt = Carbon::now()->addMinutes(1);
+
+    $latestUrl = $this->adapter->temporaryUrl(
+        path: 'text.txt',
+        expiration: $expiresAt,
+        versionId: $versions[0]['VersionId']
+    );
+
+    expect(parse_url($latestUrl))
+        ->path->toBe("/{$this->config['bucket']}/test/text.txt")
+        ->query->toContain('versionId='.$versions[0]['VersionId'])
+        ->query->toContain('X-Amz-Expires=60');
+
+    $firstUrl = $this->adapter->temporaryUrl(
+        path: 'text.txt',
+        expiration: $expiresAt,
+        versionId: $versions[1]['VersionId']
+    );
+
+    expect(parse_url($firstUrl))
+        ->path->toBe("/{$this->config['bucket']}/test/text.txt")
+        ->query->toContain('versionId='.$versions[1]['VersionId'])
+        ->query->toContain('X-Amz-Expires=60');
 });
 
 function createTestBucket(S3Client $client, array $config): void

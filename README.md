@@ -56,6 +56,20 @@ Illuminate\Support\Collection {
 }
 ```
 
+#### Generate a temporary url for a specific version of the object
+```php
+Storage::disk('s3')->temporaryUrl(
+    path: 'path/to/file.txt',
+    expiration: Carbon::now()->addMinutes(1),
+    versionId: 'ca3dd4a6-9a92-4368-8ce2-a5df45c63f43'
+);
+```
+
+##### Response
+```php
+http://s3/bucket/path/to/file.txt?versionId=ca3dd4a6-9a92-4368-8ce2-a5df45c63f43&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=sail%2F20231114%2Feu-west-1%2Fs3%2Faws4_request&X-Amz-Date=20231114T170430Z&X-Amz-SignedHeaders=host&X-Amz-Expires=60&X-Amz-Signature=f59d8e667cee7ac9ed5bc1fcfcd4cd02dd742fb9e4dd3f034186ec22dd699647
+```
+
 ## Change log
 
 Please see the [changelog][3] for more information on what has changed recently.

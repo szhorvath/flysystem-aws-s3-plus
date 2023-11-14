@@ -7,6 +7,7 @@ use Aws\Result;
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Utils;
+use Illuminate\Support\Carbon;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\AwsS3V3\PortableVisibilityConverter as AwsS3PortableVisibilityConverter;
 use League\Flysystem\Filesystem as Flysystem;
@@ -88,10 +89,27 @@ it('should retrieve a list of versions of an S3 object', function () {
         ->size->toBe(12);
 });
 
+it('should get a temporary url of a specific version of an object', function () {
+    $adapter = mockAdapter(new Result());
+
+    $expiresAt = Carbon::now()->addMinutes(1);
+
+    $url = $adapter->temporaryUrl(
+        path: 'text.txt',
+        expiration: $expiresAt,
+        versionId: 'version-id-string'
+    );
+
+    expect(parse_url($url))
+        ->path->toBe('/testbucket/test/text.txt')
+        ->query->toContain('versionId=version-id-string')
+        ->query->toContain('X-Amz-Expires=60');
+});
+
 function mockAdapter(Result $result)
 {
     $config = [
-        'bucket' => $_ENV['AWS_BUCKET'] = 'test',
+        'bucket' => $_ENV['AWS_BUCKET'] = 'testbucket',
         'region' => $_ENV['AWS_DEFAULT_REGION'] = 'eu-west-1',
         'url' => $_ENV['AWS_URL'] = 'http://minio:9000',
         'endpoint' => 'http://minio:9000',
