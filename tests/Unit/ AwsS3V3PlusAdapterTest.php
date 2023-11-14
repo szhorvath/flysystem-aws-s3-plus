@@ -1,9 +1,11 @@
 
 <?php
 
+use Aws\Api\DateTimeResult;
 use Aws\MockHandler;
 use Aws\Result;
 use Aws\S3\S3Client;
+use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Utils;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\AwsS3V3\PortableVisibilityConverter as AwsS3PortableVisibilityConverter;
@@ -25,6 +27,65 @@ it('should read return a file with version id provided', function () {
     $adapter = mockAdapter(new Result(['Body' => $stream]));
 
     expect($adapter->get('text.txt', 'version-id-string'))->toBe('data');
+});
+
+it('should retrieve all version of an object', function () {
+
+    $result = new Result([
+        'Versions' => [
+            [
+                'ETag' => '"27a03c63edc43a5191fb5d2868021a17"',
+                'Size' => '14',
+                'StorageClass' => 'STANDARD',
+                'Key' => 'test/text.txt',
+                'VersionId' => '5d0f17d4-f4a5-4d9d-a296-383202bd5d35',
+                'IsLatest' => true,
+                'LastModified' => DateTimeResult::fromISO8601('2024-08-13T14:39:22.000Z'),
+                'Owner' => [
+                    'DisplayName' => 'minio',
+                    'ID' => '02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4',
+                ],
+            ],
+            [
+                'ETag' => '"9310ca6aea85baa1adb30292d379b274"',
+                'Size' => '12',
+                'StorageClass' => 'STANDARD',
+                'Key' => 'test/text.txt',
+                'VersionId' => '850de980-15f2-450f-bcd6-1f08d60f3988',
+                'IsLatest' => false,
+                'LastModified' => DateTimeResult::fromISO8601('2023-08-13T14:39:22.000Z'),
+                'Owner' => [
+                    'DisplayName' => 'minio',
+                    'ID' => '02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4',
+                ],
+            ],
+        ]]);
+
+    $adapter = mockAdapter($result);
+
+    $path = 'test/text.txt';
+
+    $versions = $adapter->versions($path);
+
+    expect($versions)->toBeCollection()->toHaveCount(2);
+
+    expect($versions[0])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBeString()
+        ->type->toBe('file')
+        ->latest->toBeTrue()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(14);
+
+    expect($versions[1])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBeString()
+        ->type->toBe('file')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(12);
 });
 
 function mockAdapter(Result $result)

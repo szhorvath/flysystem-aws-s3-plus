@@ -37,7 +37,8 @@
         "pestphp/pest": "^2.24",
         "orchestra/testbench": "^8.15",
         "pestphp/pest-plugin-type-coverage": "^2.4",
-        "laravel/pint": "^1.13"
+        "laravel/pint": "^1.13",
+        "defstudio/pest-plugin-laravel-expectations": "^2.1"
     },
     "autoload-dev": {
         "classmap": [

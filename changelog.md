@@ -6,3 +6,6 @@ All notable changes to `FlysystemAwsS3Plus` will be documented in this file.
 
 ### Added
 - Prototype adapter implementation
+- Added Service provider
+- Extend storage facade with S3 plus adapter implementation
+

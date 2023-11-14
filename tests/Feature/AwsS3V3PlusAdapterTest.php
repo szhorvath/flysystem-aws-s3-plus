@@ -2,6 +2,7 @@
 <?php
 
 use Aws\S3\S3Client;
+use Carbon\CarbonImmutable;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\AwsS3V3\PortableVisibilityConverter as AwsS3PortableVisibilityConverter;
 use League\Flysystem\Filesystem as Flysystem;
@@ -125,6 +126,60 @@ it('should read the latest version when the path called', function () {
 
     fclose($stream1);
     fclose($stream2);
+});
+
+it('should retrieve all version of an object', function () {
+    $this->client->putBucketVersioning([
+        'Bucket' => $this->config['bucket'],
+        'VersioningConfiguration' => [
+            'MFADelete' => 'Disabled',
+            'Status' => 'Enabled',
+        ],
+    ]);
+
+    $path = $this->config['root'].'/text.txt';
+
+    $stream1 = tmpfile();
+    fwrite($stream1, 'DataVersion1');
+    rewind($stream1);
+
+    $this->client->putObject([
+        'Bucket' => $this->config['bucket'],
+        'Key' => $path,
+        'Body' => $stream1,
+    ]);
+
+    $stream2 = tmpfile();
+    fwrite($stream2, 'DataVersionTwo');
+    rewind($stream2);
+
+    $this->client->putObject([
+        'Bucket' => $this->config['bucket'],
+        'Key' => $path,
+        'Body' => $stream2,
+    ]);
+
+    $versions = $this->adapter->versions($path);
+
+    expect($versions)->toBeCollection()->toHaveCount(2);
+
+    expect($versions[0])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBeString()
+        ->type->toBe('file')
+        ->latest->toBeTrue()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(14);
+
+    expect($versions[1])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBeString()
+        ->type->toBe('file')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(12);
 });
 
 function createTestBucket(S3Client $client, array $config): void
