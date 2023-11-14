@@ -1,6 +1,7 @@
 
 <?php
 
+use Aws\Result;
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Utils;
@@ -78,52 +79,39 @@ afterEach(function () {
     $this->client->deleteBucket(['Bucket' => $this->config['bucket']]);
 });
 
-it('should read', function () {
-    $stream = Utils::streamFor('data');
-
-    $this->client->putObject([
-        'Bucket' => $this->config['bucket'],
-        'Key' => $this->config['root'].'/text.txt',
-        'Body' => $stream,
-    ]);
+it('should get an object content', function () {
+    putObject($this->client, $this->config, 'text.txt', 'data');
 
     expect($this->adapter->get('text.txt'))->toBe('data');
+});
+
+it('should get the content of an object with the exact version', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    putObject($this->client, $this->config, 'text.txt', 'DataVersion1');
+    putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo');
+
+    $versions = listObjectVersions($this->client, $this->config, 'text.txt')->get('Versions');
+
+    expect($this->adapter->get('text.txt', $versions[1]['VersionId']))->toBe('DataVersion1');
 });
 
 it('should read the latest version when the path called', function () {
     turnOnVersioning($this->client, $this->config);
 
-    $this->client->putObject([
-        'Bucket' => $this->config['bucket'],
-        'Key' => $this->config['root'].'/text.txt',
-        'Body' => Utils::streamFor('DataVersion1'),
-    ]);
-
-    $this->client->putObject([
-        'Bucket' => $this->config['bucket'],
-        'Key' => $this->config['root'].'/text.txt',
-        'Body' => Utils::streamFor('DataVersionTwo'),
-    ]);
+    putObject($this->client, $this->config, 'text.txt', 'DataVersion1');
+    putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo');
 
     expect($this->adapter->get('text.txt'))->toBe('DataVersionTwo');
 });
 
-it('should retrieve all version of an object', function () {
+it('should retrieve a list of versions of an S3 object', function () {
     turnOnVersioning($this->client, $this->config);
 
     $path = $this->config['root'].'/text.txt';
 
-    $this->client->putObject([
-        'Bucket' => $this->config['bucket'],
-        'Key' => $path,
-        'Body' => Utils::streamFor('DataVersion1'),
-    ]);
-
-    $this->client->putObject([
-        'Bucket' => $this->config['bucket'],
-        'Key' => $path,
-        'Body' => Utils::streamFor('DataVersionTwo'),
-    ]);
+    putObject($this->client, $this->config, 'text.txt', 'DataVersion1');
+    putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo');
 
     $versions = $this->adapter->versions($path);
 
@@ -157,6 +145,23 @@ function createTestBucket(S3Client $client, array $config): void
     } catch (\Throwable $th) {
         $client->createBucket($params);
     }
+}
+
+function putObject(S3Client $client, array $config, string $path, string $content): void
+{
+    $client->putObject([
+        'Bucket' => $config['bucket'],
+        'Key' => $config['root'].'/'.$path,
+        'Body' => Utils::streamFor($content),
+    ]);
+}
+
+function listObjectVersions(S3Client $client, array $config, string $path): Result
+{
+    return $client->listObjectVersions([
+        'Bucket' => $config['bucket'],
+        'Key' => $config['root'].'/'.$path,
+    ]);
 }
 
 function turnOnVersioning(S3Client $client, array $config): void

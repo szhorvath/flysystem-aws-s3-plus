@@ -13,7 +13,7 @@ use League\Flysystem\Filesystem as Flysystem;
 use League\Flysystem\Visibility;
 use Szhorvath\FlysystemAwsS3Plus\AwsS3V3PlusAdapter;
 
-it('should read', function () {
+it('should get an object content', function () {
     $stream = Utils::streamFor('data');
 
     $adapter = mockAdapter(new Result(['Body' => $stream]));
@@ -21,7 +21,7 @@ it('should read', function () {
     expect($adapter->get('text.txt'))->toBe('data');
 });
 
-it('should read return a file with version id provided', function () {
+it('should get the content of an object with the exact version', function () {
     $stream = Utils::streamFor('data');
 
     $adapter = mockAdapter(new Result(['Body' => $stream]));
@@ -29,7 +29,7 @@ it('should read return a file with version id provided', function () {
     expect($adapter->get('text.txt', 'version-id-string'))->toBe('data');
 });
 
-it('should retrieve all version of an object', function () {
+it('should retrieve a list of versions of an S3 object', function () {
 
     $result = new Result([
         'Versions' => [
