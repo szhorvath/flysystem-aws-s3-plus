@@ -70,18 +70,18 @@ it('should retrieve all version of an object', function () {
     expect($versions)->toBeCollection()->toHaveCount(2);
 
     expect($versions[0])
-        ->hash->toBeString()
+        ->hash->toBe('27a03c63edc43a5191fb5d2868021a17')
         ->key->toBe($path)
-        ->version->toBeString()
+        ->version->toBe('5d0f17d4-f4a5-4d9d-a296-383202bd5d35')
         ->type->toBe('file')
         ->latest->toBeTrue()
         ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
         ->size->toBe(14);
 
     expect($versions[1])
-        ->hash->toBeString()
+        ->hash->toBe('9310ca6aea85baa1adb30292d379b274')
         ->key->toBe($path)
-        ->version->toBeString()
+        ->version->toBe('850de980-15f2-450f-bcd6-1f08d60f3988')
         ->type->toBe('file')
         ->latest->toBeFalse()
         ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
