@@ -3,6 +3,7 @@
 
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
+use GuzzleHttp\Psr7\Utils;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\AwsS3V3\PortableVisibilityConverter as AwsS3PortableVisibilityConverter;
 use League\Flysystem\Filesystem as Flysystem;
@@ -78,9 +79,7 @@ afterEach(function () {
 });
 
 it('should read', function () {
-    $stream = tmpfile();
-    fwrite($stream, 'data');
-    rewind($stream);
+    $stream = Utils::streamFor('data');
 
     $this->client->putObject([
         'Bucket' => $this->config['bucket'],
@@ -89,74 +88,41 @@ it('should read', function () {
     ]);
 
     expect($this->adapter->get('text.txt'))->toBe('data');
-
-    fclose($stream);
 });
 
 it('should read the latest version when the path called', function () {
-    $this->client->putBucketVersioning([
-        'Bucket' => $this->config['bucket'],
-        'VersioningConfiguration' => [
-            'MFADelete' => 'Disabled',
-            'Status' => 'Enabled',
-        ],
-    ]);
-
-    $stream1 = tmpfile();
-    fwrite($stream1, 'DataVersion1');
-    rewind($stream1);
-
-    $stream2 = tmpfile();
-    fwrite($stream2, 'DataVersion2');
-    rewind($stream2);
+    turnOnVersioning($this->client, $this->config);
 
     $this->client->putObject([
         'Bucket' => $this->config['bucket'],
         'Key' => $this->config['root'].'/text.txt',
-        'Body' => $stream1,
+        'Body' => Utils::streamFor('DataVersion1'),
     ]);
 
     $this->client->putObject([
         'Bucket' => $this->config['bucket'],
         'Key' => $this->config['root'].'/text.txt',
-        'Body' => $stream2,
+        'Body' => Utils::streamFor('DataVersionTwo'),
     ]);
 
-    expect($this->adapter->get('text.txt'))->toBe('DataVersion2');
-
-    fclose($stream1);
-    fclose($stream2);
+    expect($this->adapter->get('text.txt'))->toBe('DataVersionTwo');
 });
 
 it('should retrieve all version of an object', function () {
-    $this->client->putBucketVersioning([
-        'Bucket' => $this->config['bucket'],
-        'VersioningConfiguration' => [
-            'MFADelete' => 'Disabled',
-            'Status' => 'Enabled',
-        ],
-    ]);
+    turnOnVersioning($this->client, $this->config);
 
     $path = $this->config['root'].'/text.txt';
 
-    $stream1 = tmpfile();
-    fwrite($stream1, 'DataVersion1');
-    rewind($stream1);
-
     $this->client->putObject([
         'Bucket' => $this->config['bucket'],
         'Key' => $path,
-        'Body' => $stream1,
+        'Body' => Utils::streamFor('DataVersion1'),
     ]);
 
-    $stream2 = tmpfile();
-    fwrite($stream2, 'DataVersionTwo');
-    rewind($stream2);
-
     $this->client->putObject([
         'Bucket' => $this->config['bucket'],
         'Key' => $path,
-        'Body' => $stream2,
+        'Body' => Utils::streamFor('DataVersionTwo'),
     ]);
 
     $versions = $this->adapter->versions($path);
@@ -191,4 +157,15 @@ function createTestBucket(S3Client $client, array $config): void
     } catch (\Throwable $th) {
         $client->createBucket($params);
     }
+}
+
+function turnOnVersioning(S3Client $client, array $config): void
+{
+    $client->putBucketVersioning([
+        'Bucket' => $config['bucket'],
+        'VersioningConfiguration' => [
+            'MFADelete' => 'Disabled',
+            'Status' => 'Enabled',
+        ],
+    ]);
 }
