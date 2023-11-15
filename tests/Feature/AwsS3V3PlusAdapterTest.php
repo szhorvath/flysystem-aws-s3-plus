@@ -70,12 +70,14 @@ afterEach(function () {
         }
     }
 
-    $this->client->deleteObjects([
-        'Bucket' => $this->config['bucket'],
-        'Delete' => [
-            'Objects' => $objects,
-        ],
-    ]);
+    if (count($objects) > 0) {
+        $this->client->deleteObjects([
+            'Bucket' => $this->config['bucket'],
+            'Delete' => [
+                'Objects' => $objects,
+            ],
+        ]);
+    }
 
     $this->client->deleteBucket(['Bucket' => $this->config['bucket']]);
 });
@@ -177,7 +179,7 @@ it('should create a delete marker when delete used without version', function ()
 
     $this->adapter->delete('text.txt');
 
-    $list = listObjectVersions($this->client, $this->config, '/')->get('DeleteMarkers');
+    $list = listObjectVersions($this->client, $this->config, 'text.txt')->get('DeleteMarkers');
 
     expect($list)
         ->toBeArray()
@@ -186,6 +188,20 @@ it('should create a delete marker when delete used without version', function ()
     expect($list[0])
         ->Key->toBe($this->config['root'].'/text.txt')
         ->IsLatest->toBeTrue();
+});
+
+it('should permanently delete a specific version of an object', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    $versionId = putObject($this->client, $this->config, 'text.txt', 'data')->get('VersionId');
+
+    $this->adapter->delete([$versionId => 'text.txt']);
+
+    $list = listObjectVersions($this->client, $this->config, 'text.txt');
+
+    expect($list)
+        ->hasKey('Versions')->toBeFalse()
+        ->hasKey('DeleteMarkers')->toBeFalse();
 });
 
 function createTestBucket(S3Client $client, array $config): void
@@ -199,9 +215,9 @@ function createTestBucket(S3Client $client, array $config): void
     }
 }
 
-function putObject(S3Client $client, array $config, string $path, string $content): void
+function putObject(S3Client $client, array $config, string $path, string $content): Result
 {
-    $client->putObject([
+    return $client->putObject([
         'Bucket' => $config['bucket'],
         'Key' => $config['root'].'/'.$path,
         'Body' => Utils::streamFor($content),
@@ -216,9 +232,9 @@ function listObjectVersions(S3Client $client, array $config, string $path): Resu
     ]);
 }
 
-function turnOnVersioning(S3Client $client, array $config): void
+function turnOnVersioning(S3Client $client, array $config): Result
 {
-    $client->putBucketVersioning([
+    return $client->putBucketVersioning([
         'Bucket' => $config['bucket'],
         'VersioningConfiguration' => [
             'MFADelete' => 'Disabled',

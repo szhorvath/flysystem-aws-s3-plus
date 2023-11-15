@@ -6,7 +6,6 @@ use Aws\MockHandler;
 use Aws\Result;
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
-use Closure;
 use GuzzleHttp\Psr7\Utils;
 use Illuminate\Support\Carbon;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
@@ -150,6 +149,34 @@ it('should create a delete marker when delete used without version', function ($
             new Result([
                 'DeleteMarker' => true,
                 'VersionId' => '413da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+        ]],
+]);
+
+it('should permanently delete a specific version of an object', function ($params, $result) {
+    $adapter = mockAdapter($result);
+
+    expect($adapter->delete($params))->toBeTrue();
+})->with([
+    'delete single' => [
+        ['213da9a6-3f07-42c4-b7dc-e352d0cb6a0f' => 'text.txt'],
+        new Result([
+            'DeleteMarker' => false,
+            'VersionId' => '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+        ])],
+    'delete multiple' => [
+        [
+            '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f' => 'text1.txt',
+            '313da9a6-3f07-42c4-b7dc-e352d0cb6a0f' => 'text2.txt',
+        ],
+        [
+            new Result([
+                'DeleteMarker' => false,
+                'VersionId' => '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+            new Result([
+                'DeleteMarker' => false,
+                'VersionId' => '313da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
             ]),
         ]],
 ]);
