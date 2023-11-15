@@ -220,7 +220,7 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
 
             $deleteMarkers = (new Collection($versions['deleteMarkers']))
                 ->map(fn ($deleteMarker) => [
-                    'hash' => str_replace('"', '', $deleteMarker['ETag']) ?? null, // https://github.com/aws/aws-sdk-net/issues/815#issuecomment-729056677
+                    'hash' => $deleteMarker['ETag'] ?? '', // https://github.com/aws/aws-sdk-net/issues/815#issuecomment-729056677
                     'key' => $deleteMarker['Key'],
                     'version' => $deleteMarker['VersionId'],
                     'type' => 'deleteMarker',
