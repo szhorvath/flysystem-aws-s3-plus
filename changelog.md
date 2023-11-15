@@ -9,3 +9,10 @@ All notable changes to `FlysystemAwsS3Plus` will be documented in this file.
 - Added Service provider
 - Extend storage facade with S3 plus adapter implementation
 
+## Version 1.0.0
+
+### Added
+- Added ability to list object versions
+- Added ability to generate temporary url for a specific object version
+- Added the ability to delete specific object versions or delete object delete markers
+- Added the ability to restore any object versions and keep version history
