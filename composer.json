@@ -45,6 +45,13 @@
             "tests/TestCase.php"
         ]
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Szhorvath\\FlysystemAwsS3Plus\\AwsS3PlusFilesystemServiceProvider"
+            ]
+        }
+    },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
