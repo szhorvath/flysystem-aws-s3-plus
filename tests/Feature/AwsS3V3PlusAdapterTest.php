@@ -204,6 +204,48 @@ it('should permanently delete a specific version of an object', function () {
         ->hasKey('DeleteMarkers')->toBeFalse();
 });
 
+it('should restores the object by deleting the the delete marker', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    putObject($this->client, $this->config, 'text.txt', 'data');
+
+    $versionId = deleteObject($this->client, $this->config, 'text.txt')->get('VersionId');
+
+    expect($this->adapter->delete([$versionId => 'text.txt']))->toBeTrue();
+
+    $list = listObjectVersions($this->client, $this->config, 'text.txt');
+
+    expect($list)
+        ->get('Versions')->toBeArray()->toHaveCount(1)
+        ->hasKey('DeleteMarkers')->toBeFalse();
+
+    expect($list->get('Versions')[0])
+        ->Key->toBe($this->config['root'].'/text.txt')
+        ->IsLatest->toBeTrue()
+        ->Size->toBe('4');
+});
+
+it('should restores the object by copying the version to the top of the stack', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    $versionId = putObject($this->client, $this->config, 'text.txt', 'data')->get('VersionId');
+
+    deleteObject($this->client, $this->config, 'text.txt');
+
+    expect($this->adapter->restore('text.txt', $versionId))->toBeTrue();
+
+    $list = listObjectVersions($this->client, $this->config, 'text.txt');
+
+    expect($list)
+        ->get('Versions')->toBeArray()->toHaveCount(2)
+        ->get('DeleteMarkers')->toBeArray()->toHaveCount(1);
+
+    expect($list->get('Versions')[0])
+        ->Key->toBe($this->config['root'].'/text.txt')
+        ->IsLatest->toBeTrue()
+        ->Size->toBe('4');
+});
+
 function createTestBucket(S3Client $client, array $config): void
 {
     $params = ['Bucket' => $config['bucket']];
@@ -222,6 +264,16 @@ function putObject(S3Client $client, array $config, string $path, string $conten
         'Key' => $config['root'].'/'.$path,
         'Body' => Utils::streamFor($content),
     ]);
+}
+
+function deleteObject(S3Client $client, array $config, string $path, string $versionId = null): Result
+{
+    $version = $versionId ? ['VersionId' => $versionId] : [];
+
+    return $client->deleteObject(array_merge([
+        'Bucket' => $config['bucket'],
+        'Key' => $config['root'].'/'.$path,
+    ], $version));
 }
 
 function listObjectVersions(S3Client $client, array $config, string $path): Result

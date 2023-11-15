@@ -181,6 +181,32 @@ it('should permanently delete a specific version of an object', function ($param
         ]],
 ]);
 
+it('should restores the object by copying the version to the top of the stack', function () {
+    $adapter = mockAdapter([
+        new Result(),
+        new Result([
+            'CopyObjectResult' => [
+                'ETag' => '"8d777f385d3dfec8815d20f7496026dc"',
+                'LastModified' => DateTimeResult::fromISO8601('2023-08-13T14:39:22.000Z'),
+            ],
+            'Expiration' => '',
+            'CopySourceVersionId' => 'dc61cdca-f47d-4f99-904e-0d5a50ad2a87',
+            'VersionId' => '4163a25f-d992-4a4a-85e2-b0309fcc9249',
+            'ServerSideEncryption' => '',
+            'SSECustomerAlgorithm' => '',
+            'SSECustomerKeyMD5' => '',
+            'SSEKMSKeyId' => '',
+            'SSEKMSEncryptionContext' => '',
+            'BucketKeyEnabled' => false,
+            'RequestCharged' => '',
+            'ObjectURL' => 'http://127.0.0.1:9000/testbucket/test/text.txt',
+        ]),
+    ]);
+
+    expect($adapter->restore('text.txt', 'version-id-string'))->toBeTrue();
+
+});
+
 function mockAdapter(array|Closure|Result $result)
 {
     $config = [

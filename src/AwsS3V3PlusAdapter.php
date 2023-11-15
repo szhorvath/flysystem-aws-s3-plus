@@ -11,10 +11,12 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Traits\Conditionable;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\FilesystemOperator;
+use League\Flysystem\UnableToCopyFile;
 use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToReadFile;
 use Psr\Http\Message\StreamInterface;
 use Szhorvath\FlysystemAwsS3Plus\Exceptions\UnableToListVersions;
+use Szhorvath\FlysystemAwsS3Plus\Exceptions\UnableToRestoreFile;
 use Throwable;
 
 class AwsS3V3PlusAdapter extends FilesystemAdapter
@@ -298,6 +300,44 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
         $paths = is_array($paths) ? $paths : func_get_args();
 
         return true;
+    }
+
+    /**
+     * @throws UnableToCopyFile
+     */
+    private function copyObject(string $source, string $destination, array $options = []): void
+    {
+        try {
+            $this->client->copy(
+                $this->config['bucket'],
+                $this->prefixer->prefixPath($source),
+                $this->config['bucket'],
+                $this->prefixer->prefixPath($destination),
+                'private',
+                $options
+            );
+        } catch (Throwable $th) {
+            throw UnableToCopyFile::fromLocationTo($source, $destination, $th);
+        }
+    }
+
+    /**
+     * @throws Throwable|UnableToRestoreFile
+     */
+    public function restore(string $path, string $versionId = null): bool
+    {
+        $success = true;
+
+        try {
+            $options = $versionId ? ['version_id' => $versionId] : [];
+
+            $this->copyObject($path, $path, $options);
+        } catch (Throwable $exception) {
+            throw_if($this->throwsExceptions(), UnableToRestoreFile::fromLocation($path, $exception));
+            $success = false;
+        }
+
+        return $success;
     }
 
     public function getClient(): S3Client

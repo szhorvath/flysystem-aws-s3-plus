@@ -99,6 +99,16 @@ Storage::disk('s3')->delete([
 ]);
 ```
 
+#### Restoring previous versions
+```php
+// Deleting the Delete marker
+Storage::disk('s3')->delete(['f8ffee13-9a0f-4031-85e7-f92f253ec42e' => 'path/to/file1.txt']);
+
+// Copy a previous version of the object into the same bucket.
+Storage::disk('s3')->restore('path/to/file1.txt', 'f8ffee13-9a0f-4031-85e7-f92f253ec42e');
+```
+[Restoring previous versions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RestoringPreviousVersions.html)
+
 ## Change log
 
 Please see the [changelog][3] for more information on what has changed recently.
