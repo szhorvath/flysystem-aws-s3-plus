@@ -6,6 +6,7 @@ use Aws\MockHandler;
 use Aws\Result;
 use Aws\S3\S3Client;
 use Carbon\CarbonImmutable;
+use Closure;
 use GuzzleHttp\Psr7\Utils;
 use Illuminate\Support\Carbon;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
@@ -106,7 +107,54 @@ it('should get a temporary url of a specific version of an object', function () 
         ->query->toContain('X-Amz-Expires=60');
 });
 
-function mockAdapter(Result $result)
+it('should create a delete marker when delete used without version', function ($params, $result) {
+    $adapter = mockAdapter($result);
+
+    if (is_array($params) && count($params) === 3) {
+        [$param1, $param2, $param3] = $params;
+
+        expect($adapter->delete($param1, $param2, $param3))->toBeTrue();
+    } else {
+        expect($adapter->delete($params))->toBeTrue();
+    }
+})->with([
+    'delete single' => [
+        'text.txt',
+        new Result([
+            'DeleteMarker' => true,
+            'VersionId' => '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+        ])],
+    'delete multiple as array' => [
+        ['text1.txt', 'text2.txt'],
+        [
+            new Result([
+                'DeleteMarker' => true,
+                'VersionId' => '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+            new Result([
+                'DeleteMarker' => true,
+                'VersionId' => '313da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+        ]],
+    'delete multiple as params' => [
+        ['text1.txt', 'text2.txt', 'text3.txt'],
+        [
+            new Result([
+                'DeleteMarker' => true,
+                'VersionId' => '213da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+            new Result([
+                'DeleteMarker' => true,
+                'VersionId' => '313da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+            new Result([
+                'DeleteMarker' => true,
+                'VersionId' => '413da9a6-3f07-42c4-b7dc-e352d0cb6a0f',
+            ]),
+        ]],
+]);
+
+function mockAdapter(array|Closure|Result $result)
 {
     $config = [
         'bucket' => $_ENV['AWS_BUCKET'] = 'testbucket',
@@ -125,7 +173,13 @@ function mockAdapter(Result $result)
 
     $mock = new MockHandler();
 
-    $mock->append($result);
+    if (is_array($result)) {
+        foreach ($result as $value) {
+            $mock->append($value);
+        }
+    } else {
+        $mock->append($result);
+    }
 
     $client = new S3Client($config + ['handler' => $mock]);
 

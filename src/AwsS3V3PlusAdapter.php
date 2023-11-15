@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Traits\Conditionable;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter as S3Adapter;
 use League\Flysystem\FilesystemOperator;
+use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToReadFile;
 use Psr\Http\Message\StreamInterface;
 use Szhorvath\FlysystemAwsS3Plus\Exceptions\UnableToListVersions;
@@ -96,6 +97,43 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
     }
 
     /**
+     * Get a temporary upload URL for the file at the given path.
+     *
+     * @param  string  $path
+     * @param  DateTimeInterface  $expiration
+     * @return array
+     *
+     * @throws RuntimeException
+     * @throws LogicException
+     * @throws InvalidArgumentException
+     */
+    public function temporaryUploadUrl($path, $expiration, array $options = [])
+    {
+        $command = $this->client->getCommand('PutObject', array_merge([
+            'Bucket' => $this->config['bucket'],
+            'Key' => $this->prefixer->prefixPath($path),
+        ], $options));
+
+        $signedRequest = $this->client->createPresignedRequest(
+            $command, $expiration, $options
+        );
+
+        $uri = $signedRequest->getUri();
+
+        // If an explicit base URL has been set on the disk configuration then we will use
+        // it as the base URL instead of the default path. This allows the developer to
+        // have full control over the base path for this filesystem's generated URLs.
+        if (isset($this->config['temporary_url'])) {
+            $uri = $this->replaceBaseUrl($uri, $this->config['temporary_url']);
+        }
+
+        return [
+            'url' => (string) $uri,
+            'headers' => $signedRequest->getHeaders(),
+        ];
+    }
+
+    /**
      * @throws UnableToReadFile
      * @throws InvalidArgumentException
      */
@@ -113,8 +151,8 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
 
         try {
             return $this->client->execute($command)->get('Body');
-        } catch (Throwable $exception) {
-            throw UnableToReadFile::fromLocation($path, '', $exception);
+        } catch (Throwable $th) {
+            throw UnableToReadFile::fromLocation($path, '', $th);
         }
     }
 
@@ -142,8 +180,8 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
                 'versions' => $response->get('Versions'),
                 'deleteMarkers' => $response->hasKey('DeleteMarkers') ? $response->get('DeleteMarkers') : [],
             ];
-        } catch (Throwable $exception) {
-            throw UnableToListVersions::create($path, '', $exception);
+        } catch (Throwable $th) {
+            throw UnableToListVersions::create($path, '', $th);
         }
     }
 
@@ -205,6 +243,61 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
         } catch (Throwable $th) {
             throw UnableToListVersions::create($path, '', $th);
         }
+    }
+
+    /**
+     * @throws UnableToDeleteFile
+     * @throws InvalidArgumentException
+     */
+    private function deleteObject(string $path, array $options = []): void
+    {
+        $arguments = ['Bucket' => $this->config['bucket'], 'Key' => $this->prefixer->prefixPath($path)] + $options;
+
+        $command = $this->client->getCommand('DeleteObject', $arguments);
+
+        try {
+            $this->client->execute($command);
+        } catch (Throwable $th) {
+            throw UnableToDeleteFile::atLocation($path, '', $th);
+        }
+    }
+
+    /**
+     * Delete the file at a given path.
+     *
+     * @param  string|array  $paths
+     * @return bool
+     *
+     * @throws Throwable
+     * @throws InvalidArgumentException
+     */
+    public function delete($paths)
+    {
+        $paths = is_array($paths) ? $paths : func_get_args();
+
+        $success = true;
+        $versioned = ! array_is_list($paths);
+
+        foreach ($paths as $version => $path) {
+            try {
+                $options = $versioned ? ['VersionId' => $version] : [];
+
+                $this->deleteObject($path, $options);
+            } catch (UnableToDeleteFile $e) {
+                throw_if($this->throwsExceptions(), $e);
+
+                $success = false;
+            }
+        }
+
+        return $success;
+    }
+
+    public function permanentDelete($paths): bool
+    {
+        $paths = is_array($paths) ? $paths : func_get_args();
+
+        return true;
     }
 
     public function getClient(): S3Client

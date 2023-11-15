@@ -46,23 +46,23 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    $results = $this->client->listObjectsV2([
+    $list = $this->client->listObjectVersions([
         'Bucket' => $this->config['bucket'],
     ]);
 
-    foreach ($results['Contents'] as $content) {
-        $versions = $this->client->listObjectVersions([
-            'Bucket' => $this->config['bucket'],
-            'Prefix' => $content['Key'],
-        ]);
+    $objects = [];
 
-        if (! isset($versions['Versions'])) {
-            $objects[] = ['Key' => $content['Key']];
-
-            continue;
+    if (isset($list['Versions'])) {
+        foreach ($list['Versions'] as $version) {
+            $objects[] = [
+                'Key' => $version['Key'],
+                'VersionId' => $version['VersionId'],
+            ];
         }
+    }
 
-        foreach ($versions['Versions'] as $version) {
+    if (isset($list['DeleteMarkers'])) {
+        foreach ($list['DeleteMarkers'] as $version) {
             $objects[] = [
                 'Key' => $version['Key'],
                 'VersionId' => $version['VersionId'],
@@ -168,6 +168,24 @@ it('should get a temporary url of a specific version of an object', function () 
         ->path->toBe("/{$this->config['bucket']}/test/text.txt")
         ->query->toContain('versionId='.$versions[1]['VersionId'])
         ->query->toContain('X-Amz-Expires=60');
+});
+
+it('should create a delete marker when delete used without version', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    putObject($this->client, $this->config, 'text.txt', 'data');
+
+    $this->adapter->delete('text.txt');
+
+    $list = listObjectVersions($this->client, $this->config, '/')->get('DeleteMarkers');
+
+    expect($list)
+        ->toBeArray()
+        ->toHaveCount(1);
+
+    expect($list[0])
+        ->Key->toBe($this->config['root'].'/text.txt')
+        ->IsLatest->toBeTrue();
 });
 
 function createTestBucket(S3Client $client, array $config): void
