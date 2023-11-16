@@ -113,8 +113,8 @@ it('should retrieve a list of versions of an S3 object', function () {
 
     $path = $this->config['root'].'/text.txt';
 
-    putObject($this->client, $this->config, 'text.txt', 'DataVersion1');
-    putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo');
+    $versionId1 = putObject($this->client, $this->config, 'text.txt', 'DataVersion1')->get('VersionId');
+    $versionIdTwo = putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo')->get('VersionId');
 
     $versions = $this->adapter->versions($path);
 
@@ -123,7 +123,7 @@ it('should retrieve a list of versions of an S3 object', function () {
     expect($versions[0])
         ->hash->toBeString()
         ->key->toBe($path)
-        ->version->toBeString()
+        ->version->toBe($versionIdTwo)
         ->type->toBe('file')
         ->latest->toBeTrue()
         ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
@@ -132,7 +132,48 @@ it('should retrieve a list of versions of an S3 object', function () {
     expect($versions[1])
         ->hash->toBeString()
         ->key->toBe($path)
-        ->version->toBeString()
+        ->version->toBe($versionId1)
+        ->type->toBe('file')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(12);
+});
+
+it('should retrieve a list of versions and delete markers in the same list', function () {
+    turnOnVersioning($this->client, $this->config);
+
+    $path = $this->config['root'].'/text.txt';
+
+    $versionId1 = putObject($this->client, $this->config, 'text.txt', 'DataVersion1')->get('VersionId');
+    $deleteMarkerId = deleteObject($this->client, $this->config, 'text.txt')->get('VersionId');
+    $versionIdTwo = putObject($this->client, $this->config, 'text.txt', 'DataVersionTwo')->get('VersionId');
+
+    $list = $this->adapter->versions($path);
+
+    expect($list)->toBeCollection()->toHaveCount(3);
+
+    expect($list[0])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBe($versionIdTwo)
+        ->type->toBe('file')
+        ->latest->toBeTrue()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(14);
+
+    expect($list[1])
+        ->hash->toBe('')
+        ->key->toBe($path)
+        ->version->toBe($deleteMarkerId)
+        ->type->toBe('deleteMarker')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(0);
+
+    expect($list[2])
+        ->hash->toBeString()
+        ->key->toBe($path)
+        ->version->toBe($versionId1)
         ->type->toBe('file')
         ->latest->toBeFalse()
         ->updatedAt->toBeInstanceOf(CarbonImmutable::class)

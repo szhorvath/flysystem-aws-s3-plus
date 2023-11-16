@@ -89,6 +89,95 @@ it('should retrieve a list of versions of an S3 object', function () {
         ->size->toBe(12);
 });
 
+it('should retrieve a list of versions and delete markers in the same list', function () {
+
+    $result = new Result([
+        'RequestCharged' => '',
+        'IsTruncated' => false,
+        'KeyMarker' => '',
+        'VersionIdMarker' => '',
+        'NextVersionIdMarker' => '',
+        'Versions' => [
+            [
+                'ETag' => '"d93328ed2d2032d8bb6d8c1b49cfc807"',
+                'Size' => '14',
+                'StorageClass' => 'STANDARD',
+                'Key' => 'test/text.txt',
+                'VersionId' => '9a18981b-fa18-4793-b406-4deb75744865',
+                'IsLatest' => true,
+                'LastModified' => DateTimeResult::fromISO8601('2024-01-12T10:00:00.000Z'),
+                'Owner' => [
+                    'DisplayName' => 'minio',
+                    'ID' => '02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4',
+                ],
+            ],
+            [
+                'ETag' => '"9310ca6aea85baa1adb30292d379b274"',
+                'Size' => '12',
+                'StorageClass' => 'STANDARD',
+                'Key' => 'test/text.txt',
+                'VersionId' => 'c22753cc-dfb2-4120-992c-ae81effef752',
+                'IsLatest' => false,
+                'LastModified' => DateTimeResult::fromISO8601('2024-01-10T10:00:00.000Z'),
+                'Owner' => [
+                    'DisplayName' => 'minio',
+                    'ID' => '02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4',
+                ],
+            ],
+        ],
+        'DeleteMarkers' => [
+            [
+                'Owner' => [
+                    'DisplayName' => 'minio',
+                    'ID' => '02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4',
+                ],
+                'Key' => 'test/text.txt',
+                'VersionId' => 'b1baa201-6a3e-4d75-8d36-38895202d8ff',
+                'IsLatest' => false,
+                'LastModified' => DateTimeResult::fromISO8601('2024-01-11T10:00:00.000Z'),
+            ],
+        ],
+        'Name' => 'testbucket',
+        'Prefix' => 'test/text.txt',
+        'MaxKeys' => 1000,
+    ]);
+
+    $adapter = mockAdapter($result);
+
+    $path = 'test/text.txt';
+
+    $versions = $adapter->versions($path);
+
+    expect($versions)->toBeCollection()->toHaveCount(3);
+
+    expect($versions[0])
+        ->hash->toBe('d93328ed2d2032d8bb6d8c1b49cfc807')
+        ->key->toBe($path)
+        ->version->toBe('9a18981b-fa18-4793-b406-4deb75744865')
+        ->type->toBe('file')
+        ->latest->toBeTrue()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(14);
+
+    expect($versions[1])
+        ->hash->toBe('')
+        ->key->toBe($path)
+        ->version->toBe('b1baa201-6a3e-4d75-8d36-38895202d8ff')
+        ->type->toBe('deleteMarker')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(0);
+
+    expect($versions[2])
+        ->hash->toBe('9310ca6aea85baa1adb30292d379b274')
+        ->key->toBe($path)
+        ->version->toBe('c22753cc-dfb2-4120-992c-ae81effef752')
+        ->type->toBe('file')
+        ->latest->toBeFalse()
+        ->updatedAt->toBeInstanceOf(CarbonImmutable::class)
+        ->size->toBe(12);
+});
+
 it('should get a temporary url of a specific version of an object', function () {
     $adapter = mockAdapter(new Result());
 

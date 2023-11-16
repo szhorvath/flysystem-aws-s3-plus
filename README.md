@@ -33,25 +33,34 @@ Storage::disk('s3')->versions("path/to/file.text");
 ##### Response
 ```php
 Illuminate\Support\Collection {
-  [
+ [
     [
-      "hash" => "27a03c63edc43a5191fb5d2868021a17"
-      "key" => "path/to/file.text"
-      "version" => "2e3bb2f1-2938-45ed-9efa-33e8346e397e"
-      "type" => "file"
-      "latest" => true
-      "updatedAt" => Carbon\CarbonImmutable
-      "size" => 14
-    ]
+      "hash" => "d93328ed2d2032d8bb6d8c1b49cfc807",
+      "key" => "test/text.txt",
+      "version" => "9a18981b-fa18-4793-b406-4deb75744865",
+      "type" => "file",
+      "latest" => true,
+      "updatedAt" => Carbon\CarbonImmutable,
+      "size" => 14,
+    ],
     [
-      "hash" => "9310ca6aea85baa1adb30292d379b274"
-      "key" => "path/to/file.text"
-      "version" => "83170b83-1d4d-405a-b0e7-02ccc2f55a3e"
-      "type" => "file"
-      "latest" => false
-      "updatedAt" => Carbon\CarbonImmutable
-      "size" => 12
-    ]
+      "hash" => "",
+      "key" => "test/text.txt",
+      "version" => "b1baa201-6a3e-4d75-8d36-38895202d8ff",
+      "type" => "deleteMarker",
+      "latest" => false,
+      "updatedAt" => Carbon\CarbonImmutable,
+      "size" => 0,
+    ],
+    [
+      "hash" => "9310ca6aea85baa1adb30292d379b274",
+      "key" => "test/text.txt",
+      "version" => "c22753cc-dfb2-4120-992c-ae81effef752",
+      "type" => "file",
+      "latest" => false,
+      "updatedAt" => Carbon\CarbonImmutable,
+      "size" => 12,
+    ],
   ]
 }
 ```
