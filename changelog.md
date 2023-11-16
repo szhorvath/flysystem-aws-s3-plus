@@ -16,3 +16,11 @@ All notable changes to `FlysystemAwsS3Plus` will be documented in this file.
 - Added ability to generate temporary url for a specific object version
 - Added the ability to delete specific object versions or delete object delete markers
 - Added the ability to restore any object versions and keep version history
+
+## Version 1.0.1
+
+### Added
+- Added more tests for list versions
+
+### Modified
+- Rename version id in version list from version to id
