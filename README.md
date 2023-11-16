@@ -35,27 +35,27 @@ Storage::disk('s3')->versions("path/to/file.text");
 Illuminate\Support\Collection {
  [
     [
+      "id" => "9a18981b-fa18-4793-b406-4deb75744865",
       "hash" => "d93328ed2d2032d8bb6d8c1b49cfc807",
       "key" => "test/text.txt",
-      "version" => "9a18981b-fa18-4793-b406-4deb75744865",
       "type" => "file",
       "latest" => true,
       "updatedAt" => Carbon\CarbonImmutable,
       "size" => 14,
     ],
     [
+      "id" => "b1baa201-6a3e-4d75-8d36-38895202d8ff",
       "hash" => "",
       "key" => "test/text.txt",
-      "version" => "b1baa201-6a3e-4d75-8d36-38895202d8ff",
       "type" => "deleteMarker",
       "latest" => false,
       "updatedAt" => Carbon\CarbonImmutable,
       "size" => 0,
     ],
     [
+      "id" => "c22753cc-dfb2-4120-992c-ae81effef752",
       "hash" => "9310ca6aea85baa1adb30292d379b274",
       "key" => "test/text.txt",
-      "version" => "c22753cc-dfb2-4120-992c-ae81effef752",
       "type" => "file",
       "latest" => false,
       "updatedAt" => Carbon\CarbonImmutable,

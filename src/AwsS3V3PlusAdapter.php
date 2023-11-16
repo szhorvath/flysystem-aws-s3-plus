@@ -220,9 +220,9 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
 
             $deleteMarkers = (new Collection($versions['deleteMarkers']))
                 ->map(fn ($deleteMarker) => [
+                    'id' => $deleteMarker['VersionId'],
                     'hash' => $deleteMarker['ETag'] ?? '', // https://github.com/aws/aws-sdk-net/issues/815#issuecomment-729056677
                     'key' => $deleteMarker['Key'],
-                    'version' => $deleteMarker['VersionId'],
                     'type' => 'deleteMarker',
                     'latest' => (bool) $deleteMarker['IsLatest'],
                     'updatedAt' => new CarbonImmutable($deleteMarker['LastModified']),
@@ -231,9 +231,9 @@ class AwsS3V3PlusAdapter extends FilesystemAdapter
 
             return (new Collection($versions['versions']))
                 ->map(fn ($version) => [
+                    'id' => $version['VersionId'],
                     'hash' => str_replace('"', '', $version['ETag']), // https://github.com/aws/aws-sdk-net/issues/815#issuecomment-729056677
                     'key' => $version['Key'],
-                    'version' => $version['VersionId'],
                     'type' => 'file',
                     'latest' => (bool) $version['IsLatest'],
                     'updatedAt' => new CarbonImmutable($version['LastModified']),
